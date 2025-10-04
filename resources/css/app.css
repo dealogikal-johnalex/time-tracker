@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@media print {
+    nav, header, footer, form, .pagination, .filter-controls, .btn, button, a { 
+        display: none !important; 
+    }
+    table { font-size: 12px; }
+}
