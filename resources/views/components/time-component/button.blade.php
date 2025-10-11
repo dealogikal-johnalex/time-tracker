@@ -6,23 +6,22 @@
     <input type="hidden" id="location" name="location">
 
     <button 
-        x-text="label" 
+        x-text="label"
         @click.prevent="handleClick"
-        :disabled="disabled"
+        :disabled="disabled || loading"
         class="px-6 py-3 rounded-lg text-white font-semibold transition flex items-center justify-center gap-2 w-40 mx-auto"
         :class="{
-            'bg-green-600 hover:bg-green-700': label === 'Clock In' && !disabled,
-            'bg-red-600 hover:bg-red-700': label === 'Clock Out' && !disabled,
+            'bg-green-600 hover:bg-green-700': label === 'Clock In' && !disabled && !loading,
+            'bg-red-600 hover:bg-red-700': label === 'Clock Out' && !disabled && !loading,
             'bg-gray-500 cursor-not-allowed': disabled || loading
         }"
     >
-        <template x-if="loading">
+        <!-- <template x-if="loading">
             <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-        </template>
-        <span x-text="loading ? 'Please wait...' : label"></span>
+        </template> -->
     </button>
 
     <p x-show="message" x-text="message" class="mt-4 text-green-600 font-semibold"></p>
@@ -35,6 +34,7 @@ document.addEventListener('alpine:init', () => {
         loading: false,
         disabled: @json($todayLog && $todayLog->clock_out ? true : false),
         message: '',
+        geolocationRequested: false, // Track if we have already requested geolocation
 
         async handleClick() {
             if (this.disabled || this.loading) return;
@@ -42,68 +42,85 @@ document.addEventListener('alpine:init', () => {
             this.loading = true;
             this.message = '';
 
-            try {
-                // ✅ Get location first
-                const pos = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject);
-                });
+            // If geolocation has already been requested and denied, show an alert
+            if (!this.geolocationRequested) {
+                this.geolocationRequested = true;
+                if (!navigator.geolocation) {
+                    this.message = 'Geolocation is not supported by your browser.';
+                    this.loading = false;
+                    return;
+                }
 
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-
-                // ✅ Reverse geocode
-                let location = '';
+                // Ask for geolocation permission (this can be a popup, depending on the browser)
                 try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const pos = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject);
+                    });
+
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+
+                    // Reverse geocode to get the location
+                    let location = '';
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                        const data = await res.json();
+                        location = data.display_name || '';
+                    } catch (e) {
+                        location = '';
+                    }
+
+                    // Proceed with Clock In / Clock Out logic
+                    const url = this.label === 'Clock In' ? "{{ route('clock.in') }}" : "{{ route('clock.out') }}";
+
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        },
+                        body: JSON.stringify({ latitude: lat, longitude: lng, location })
+                    });
+
                     const data = await res.json();
-                    location = data.display_name || '';
-                } catch (e) {
-                    location = '';
-                }
 
-                const url = this.label === 'Clock In' ? "{{ route('clock.in') }}" : "{{ route('clock.out') }}";
+                    if (res.ok) {
+                        this.message = data.message || 'Success';
+                        
+                        // Update button state after successful click
+                        if (this.label === 'Clock In') {
+                            this.label = 'Clock Out';
+                        } else {
+                            this.label = 'Already Timed Out';
+                            this.disabled = true;
+                        }
 
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    },
-                    body: JSON.stringify({ latitude: lat, longitude: lng, location })
-                });
+                        // Refresh logs dynamically if using Alpine store
+                        if (window.Alpine && Alpine.store('timeLogsRef')) {
+                            Alpine.store('timeLogsRef').fetchLogs();
+                        }
 
-                const data = await res.json();
-
-                if (res.ok) {
-                    this.message = data.message || 'Success';
-                    
-                    // ✅ Update button state after first successful click
-                    if (this.label === 'Clock In') {
-                        this.label = 'Clock Out';
+                        //// Force table refresh now
+                        // if (window.timeLogsComponent) {
+                        //     window.timeLogsComponent.fetchLogs(1);
+                        // }
                     } else {
-                        this.label = 'Already Timed Out';
-                        this.disabled = true;
+                        this.message = data.message || 'Something went wrong.';
                     }
-
-                    // Refresh logs dynamically if using Alpine store
-                    if (window.Alpine && Alpine.store('timeLogsRef')) {
-                        Alpine.store('timeLogsRef').fetchLogs();
-                    }
-
-                    // // ✅ Force table refresh now
-                    // if (window.timeLogsComponent) {
-                    //     window.timeLogsComponent.fetchLogs(1);
-                    // }
-                } else {
-                    this.message = data.message || 'Something went wrong.';
+                } catch (e) {
+                    // User denied geolocation request
+                    this.message = 'You need to enable geolocation to clock in/out.';
+                    alert('Please enable location services to use the time tracker.');
+                    console.error(e);
                 }
-            } catch (e) {
-                console.error(e);
-                this.message = 'Network error.';
-            } finally {
+            } else {
+                // Geolocation denied previously, show an alert
+                alert('You need to enable location services to use the time tracker.');
+                // alert('You need to enable location services in your device settings to use the time tracker.');
                 this.loading = false;
             }
         }
     }));
 });
 </script>
+

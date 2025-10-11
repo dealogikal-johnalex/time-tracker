@@ -27,10 +27,10 @@ class TimeLogController extends Controller
         $user = Auth::user();
 
         // Ensure there is no open time log (already clocked in)
-        $open = $user->timeLogs()->where('status', 'open')->first();
-        if ($open) {
-            return response()->json(['error' => 'You already have an open session'], 422);
-        }
+        // $open = $user->timeLogs()->where('status', 'open')->first();
+        // if ($open) {
+        //     return response()->json(['error' => 'You already have an open session'], 422);
+        // }
 
         // If no open session, check if there was an old session that was not closed
         $unfinishedLog = $user->timeLogs()->where('status', 'open')->whereNull('clock_out')->first();
