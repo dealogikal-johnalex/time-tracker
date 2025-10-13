@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('time_log_locations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('time_log_id')->constrained()->cascadeOnDelete();
-            $table->enum('type', ['clock_in', 'clock_out']);
+            $table->foreignId('time_log_id')->constrained()->onDelete('cascade');
+            $table->enum('type', ['clock_in', 'clock_out', 'break_in', 'break_out']);
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
             $table->string('address')->nullable();

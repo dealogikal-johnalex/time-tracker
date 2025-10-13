@@ -18,11 +18,13 @@ return new class extends Migration
             // store both server timestamp and optional timezone info
             $table->timestamp('clock_in')->nullable();
             $table->timestamp('clock_out')->nullable();
+            $table->timestamp('break_in')->nullable();
+            $table->timestamp('break_out')->nullable();
 
             // duration in seconds (can be computed)
             $table->integer('duration')->nullable();
 
-            $table->enum('status', ['open','closed'])->default('open');
+            $table->enum('status', ['inactive', 'clocked_in', 'on_break', 'break_completed', 'done'])->default('inactive');
             $table->text('note')->nullable();
 
             $table->timestamps();

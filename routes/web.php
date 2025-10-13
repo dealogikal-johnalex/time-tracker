@@ -29,8 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Employee self-service
-    Route::post('/time/clock-in', [TimeLogController::class, 'clockIn'])->name('clock.in');
-    Route::post('/time/clock-out', [TimeLogController::class, 'clockOut'])->name('clock.out');
+    Route::post('/log-time/{action}', [TimeLogController::class, 'store']);
     Route::get('/time-logs', [TimeLogController::class, 'getLogs'])->name('time.logs');
 
     // Admin & HR routes

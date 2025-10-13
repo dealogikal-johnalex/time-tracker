@@ -37,8 +37,10 @@
                 <thead>
                     <tr class="bg-gray-200 text-gray-800">
                         <th class="px-4 py-2 text-center">Date</th>
-                        <th class="px-4 py-2 text-center">Time In</th>
-                        <th class="px-4 py-2 text-center">Time Out</th>
+                        <th class="px-4 py-2 text-center">Clock In</th>
+                        <th class="px-4 py-2 text-center">Break In</th>
+                        <th class="px-4 py-2 text-center">Break Out</th>
+                        <th class="px-4 py-2 text-center">Clock Out</th>
                         <th class="px-4 py-2 text-center hidden lg:table-cell">Duration</th>
                         <!-- <th class="px-4 py-2 text-center">Status</th> -->
                         <th class="px-4 py-2 text-center hidden lg:table-cell">Remarks</th>
@@ -55,6 +57,8 @@
                         >
                             <td class="px-4 py-2 text-center" x-text="formatDateOnly(log.date)"></td>
                             <td class="px-4 py-2 text-center" x-text="formatTime(log.clock_in)"></td>
+                            <td class="px-4 py-2 text-center" x-text="formatTime(log.break_in)"></td>
+                            <td class="px-4 py-2 text-center" x-text="formatTime(log.break_out)"></td>
                             <td class="px-4 py-2 text-center" x-text="formatTime(log.clock_out)"></td>
                             <td class="px-4 py-2 text-center hidden lg:table-cell" x-text="calculateDuration(log.clock_in, log.clock_out)"></td>
                             <!-- <td class="px-4 py-2 text-center font-bold" x-text="log.status"></td> -->

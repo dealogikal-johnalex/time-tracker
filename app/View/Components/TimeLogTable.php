@@ -1,12 +1,13 @@
 <?php
 
-namespace App\View\Components\TimeComponent;
+namespace App\View\Components;
 
+use Closure;
+use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
-use Illuminate\Support\Facades\Auth;
 use App\Models\TimeLog;
 
-class Index extends Component
+class TimeLogTable extends Component
 {
     public $logs;
 
@@ -18,9 +19,12 @@ class Index extends Component
         $this->logs = TimeLog::where('user_id', auth()->id())->get();
     }
 
-    public function render()
+    /**
+     * Get the view / contents that represent the component.
+     */
+    public function render(): View|Closure|string
     {
-        return view('components.time-component.index', [
+        return view('components.time-log-table', [
             'logs' => $this->logs
         ]);
     }
